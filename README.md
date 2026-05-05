@@ -64,8 +64,11 @@ celery -A celery_worker.celery worker -B --loglevel=info
 6. Seed default templates:
 
 ```bash
-python seed/seed_data.py
+python seed.py
 ```
+
+This seeds full demo data (2 offices, users by role, clients, cases, sessions, judgments, finance, tasks, documents, notifications).
+Demo admin login: `admin@demo.lexoffice` / `Admin@123`
 
 ## Security Defaults
 
