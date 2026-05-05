@@ -10,6 +10,7 @@ from app.extensions import db
 from app.models import Document
 from app.schemas.core import DocumentUploadSchema
 from app.services.storage_service import build_download_url, build_preview_url, delete_file, upload_file
+from app.tasks.celery_app import celery_is_available
 from app.tasks.jobs import summarize_document_task
 from app.utils.decorators import require_permission
 from app.utils.responses import fail, ok
@@ -124,11 +125,17 @@ def delete_document(document_id):
 @bp.post("/<uuid:document_id>/summarize")
 @require_permission("cases", "read")
 def summarize_document(document_id):
+    if not celery_is_available():
+        return fail("DEPENDENCY_MISSING", "Celery is not installed", status=503)
+
     doc = Document.query.filter_by(id=document_id, office_id=g.current_user.office_id).first()
     if not doc:
         return fail("NOT_FOUND", "Document not found", status=404)
 
-    task = summarize_document_task.delay(str(document_id))
+    try:
+        task = summarize_document_task.delay(str(document_id))
+    except RuntimeError as exc:
+        return fail("DEPENDENCY_MISSING", str(exc), status=503)
     return ok(data={"task_id": task.id}, status=202)
 
 

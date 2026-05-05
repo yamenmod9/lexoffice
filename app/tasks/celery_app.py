@@ -1,12 +1,44 @@
 from __future__ import annotations
 
-from celery import Celery
-from celery.schedules import crontab
+try:
+    from celery import Celery
+    from celery.schedules import crontab
+except ImportError:
+    Celery = None
+    crontab = None
 
-celery = Celery("lexoffice")
+
+_CELERY_AVAILABLE = Celery is not None
+
+
+def _missing_celery_delay(*_args, **_kwargs):
+    raise RuntimeError("Celery is not installed")
+
+
+class _FallbackCelery:
+    class _Conf:
+        @staticmethod
+        def update(*_args, **_kwargs):
+            return None
+
+    conf = _Conf()
+
+    def task(self, *args, **kwargs):
+        def decorator(func):
+            func.delay = _missing_celery_delay
+            return func
+
+        return decorator
+
+
+celery = Celery("lexoffice") if _CELERY_AVAILABLE else _FallbackCelery()
 
 
 def make_celery(flask_app):
+    if not _CELERY_AVAILABLE:
+        flask_app.logger.warning("Celery package not installed; async/background tasks are disabled")
+        return celery
+
     celery.conf.update(
         broker_url=flask_app.config["CELERY_BROKER_URL"],
         result_backend=flask_app.config["CELERY_RESULT_BACKEND"],
@@ -62,3 +94,7 @@ def make_celery(flask_app):
 
 def get_celery():
     return celery
+
+
+def celery_is_available() -> bool:
+    return _CELERY_AVAILABLE
