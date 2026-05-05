@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import firebase_admin
-from firebase_admin import credentials, messaging
 from flask import current_app
 from flask_mail import Message
-from twilio.rest import Client as TwilioClient
 
 from app.extensions import db, mail
 from app.models import Notification
@@ -20,9 +17,20 @@ _firebase_ready = False
 
 def _init_firebase():
     global _firebase_ready
-    if _firebase_ready or firebase_admin._apps:
+    if _firebase_ready:
         _firebase_ready = True
         return
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+    except ImportError:
+        current_app.logger.warning("firebase-admin package is not installed; push notifications are disabled")
+        return
+
+    if firebase_admin._apps:
+        _firebase_ready = True
+        return
+
     credentials_json = current_app.config.get("FIREBASE_CREDENTIALS_JSON")
     if credentials_json:
         cred = credentials.Certificate(credentials_json)
@@ -43,6 +51,12 @@ def send_email_notification(to_email: str, title: str, body: str):
 
 
 def send_twilio_sms(phone: str, body: str):
+    try:
+        from twilio.rest import Client as TwilioClient
+    except ImportError:
+        current_app.logger.warning("twilio package is not installed; SMS notifications are disabled")
+        return False
+
     sid = current_app.config.get("TWILIO_ACCOUNT_SID")
     token = current_app.config.get("TWILIO_AUTH_TOKEN")
     from_number = current_app.config.get("TWILIO_FROM_NUMBER")
@@ -60,6 +74,12 @@ def send_twilio_sms(phone: str, body: str):
 def send_firebase_push(fcm_token: str, title: str, body: str, data: dict | None = None):
     if not fcm_token:
         return False
+    try:
+        from firebase_admin import messaging
+    except ImportError:
+        current_app.logger.warning("firebase-admin package is not installed; push notifications are disabled")
+        return False
+
     try:
         _init_firebase()
         if not _firebase_ready:

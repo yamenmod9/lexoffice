@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-
 
 def build_simple_pdf(title: str, lines: list[str]) -> bytes:
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+    except ImportError as exc:
+        raise RuntimeError("reportlab is required for PDF generation") from exc
+
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4

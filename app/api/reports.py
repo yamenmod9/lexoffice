@@ -5,7 +5,6 @@ from collections import defaultdict
 from datetime import date
 from io import BytesIO
 
-from docx import Document as WordDocument
 from flask import Blueprint, Response, g, request
 from sqlalchemy import func
 
@@ -51,7 +50,10 @@ def financial_monthly_pdf():
         f"Collected total: {sum(item.amount for item in payments)}",
         f"Invoiced total: {sum(item.total for item in invoices)}",
     ]
-    pdf = build_simple_pdf("Monthly Financial Report", lines)
+    try:
+        pdf = build_simple_pdf("Monthly Financial Report", lines)
+    except RuntimeError as exc:
+        return fail("DEPENDENCY_MISSING", str(exc), status=503)
     return Response(pdf, mimetype="application/pdf")
 
 
@@ -149,7 +151,15 @@ def client_statement_files(client_id):
         f"Total payments: {sum(item.amount for item in payments)}",
         f"Outstanding: {max(sum(item.total for item in invoices) - sum(item.amount for item in payments), 0)}",
     ]
-    pdf = build_simple_pdf("Client Statement", lines)
+    try:
+        from docx import Document as WordDocument
+    except ImportError:
+        return fail("DEPENDENCY_MISSING", "python-docx is required for DOCX generation", status=503)
+
+    try:
+        pdf = build_simple_pdf("Client Statement", lines)
+    except RuntimeError as exc:
+        return fail("DEPENDENCY_MISSING", str(exc), status=503)
 
     doc = WordDocument()
     doc.add_heading("Client Statement", level=1)

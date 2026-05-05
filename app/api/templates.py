@@ -111,7 +111,10 @@ def generate_from_template(template_id):
 
     context.update(payload.get("overrides") or {})
     rendered = render_template_content(template.content, context)
-    pdf_bytes = build_simple_pdf(template.name, rendered.splitlines() or [rendered])
+    try:
+        pdf_bytes = build_simple_pdf(template.name, rendered.splitlines() or [rendered])
+    except RuntimeError as exc:
+        return fail("DEPENDENCY_MISSING", str(exc), status=503)
 
     return Response(
         pdf_bytes,

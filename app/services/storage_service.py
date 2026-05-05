@@ -5,8 +5,6 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-import boto3
-from botocore.client import Config as BotoConfig
 from flask import current_app
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
@@ -32,6 +30,12 @@ def _object_key(office_id, entity_type: str, entity_id, filename: str):
 
 
 def _s3_client():
+    try:
+        import boto3
+        from botocore.client import Config as BotoConfig
+    except ImportError as exc:
+        raise RuntimeError("boto3 is required when STORAGE_BACKEND is set to s3") from exc
+
     return boto3.client(
         "s3",
         region_name=current_app.config.get("S3_REGION"),

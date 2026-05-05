@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from flask import current_app
-from openai import AzureOpenAI
 
 
 class AzureAIService:
@@ -12,6 +11,11 @@ class AzureAIService:
 
     def _client(self):
         if not self.endpoint or not self.api_key:
+            return None
+        try:
+            from openai import AzureOpenAI
+        except ImportError:
+            current_app.logger.warning("openai package is not installed; AI features are disabled")
             return None
         return AzureOpenAI(
             azure_endpoint=self.endpoint,

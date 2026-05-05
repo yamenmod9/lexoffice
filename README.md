@@ -32,7 +32,7 @@ Production-oriented Flask REST API for LexOffice (Legal Office Management SaaS) 
 1. Create virtual environment and install dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install --no-cache-dir -r requirements.txt
 ```
 
 2. Configure environment variables:
@@ -80,8 +80,15 @@ python seed/seed_data.py
 ## Running Tests
 
 ```bash
+pip install -r requirements-dev.txt
 pytest
 ```
+
+## PythonAnywhere Notes
+
+- If your account has limited disk quota, always install with `--no-cache-dir`.
+- The default `requirements.txt` is runtime-focused to reduce deployment size.
+- Optional integrations (Firebase push + dev/test tools) are in `requirements-dev.txt`.
 
 ## Endpoint Tester Page
 
